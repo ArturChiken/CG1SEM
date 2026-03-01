@@ -87,7 +87,7 @@ enum Wall {
     UpDown = 150,
     Back = 200
 };
-void drawTriangle(Vec3f t0, Vec3f t1, Vec3f t2, TGAImage& image, int* zbuffer, Wall wall) {
+void drawTriangle(Vec3f t0, Vec3f t1, Vec3f t2, TGAImage& image, int* zbuffer, Wall wall, float alpha = 0.3f) {
     int minX = std::max(0, (int)std::min({ t0.x, t1.x, t2.x }));
     int maxX = std::min(width - 1, (int)std::max({ t0.x, t1.x, t2.x }));
     int minY = std::max(0, (int)std::min({ t0.y, t1.y, t2.y }));
@@ -97,17 +97,37 @@ void drawTriangle(Vec3f t0, Vec3f t1, Vec3f t2, TGAImage& image, int* zbuffer, W
     Vec3f edge2 = t2 - t0;
     Vec3f normal = (edge1 ^ edge2).normalize();
 
-    TGAColor color = TGAColor(255, 255, 255, 255);
+    TGAColor cubeColor = TGAColor(
+        static_cast<int>(wall),
+        static_cast<int>(wall),
+        static_cast<int>(wall),
+        static_cast<int>(alpha * 255)
+    );
 
     for (int x = minX; x <= maxX; x++) {
         for (int y = minY; y <= maxY; y++) {
             Vec3f baryCoord = getBarycentricCoords(Vec3f(x, y, 0), t0, t1, t2);
             if (baryCoord.x < 0 || baryCoord.y < 0 || baryCoord.z < 0) continue;
+
             float z = t0.z * baryCoord.x + t1.z * baryCoord.y + t2.z * baryCoord.z;
             int idx = x + y * width;
-            if (zbuffer[idx] > z) continue;
-            zbuffer[idx] = z;
-            image.set(x, y, TGAColor(static_cast<int>(wall), static_cast<int>(wall), static_cast<int>(wall), 255));
+
+            if (zbuffer[idx] < z) {
+                TGAColor existingColor = image.get(x, y);
+
+                float alphaFactor = alpha;
+                float oneMinusAlpha = 1.0f - alphaFactor;
+
+                TGAColor blendedColor(
+                    static_cast<int>(cubeColor.r * alphaFactor + existingColor.r * oneMinusAlpha),
+                    static_cast<int>(cubeColor.g * alphaFactor + existingColor.g * oneMinusAlpha),
+                    static_cast<int>(cubeColor.b * alphaFactor + existingColor.b * oneMinusAlpha),
+                    255
+                );
+
+                zbuffer[idx] = z;
+                image.set(x, y, blendedColor);
+            }
         }
     }
 }
@@ -172,23 +192,6 @@ int main(int argc, char** argv) {
     Matrix viewModel = getLookAt(eyePos, centerPos, upVector);
     projectionMatrix[3][2] = -1.f / (eyePos - centerPos).norm();
 
-    model = new Model("resources/cube.obj");
-    for (int i = 0; i < model->getNumFaces(); i++) {
-        std::vector<int> face = model->getFaceByIndex(i);
-        Vec3i screenCoords[3];
-        Vec3f worldCoords[3];
-        for (int j = 0; j < 3; j++) {
-            Vec3f vert = model->getVertexByIndex(face[j]);
-            screenCoords[j] = matrixToVector(cameraViewport * projectionMatrix * viewModel * vectorToMatrix(vert));
-            worldCoords[j] = vert;
-        }
-        Wall wall;
-        if (i < 4) wall = Wall::LeftRight;
-        else if (i > 7) wall = Wall::Back;
-        else wall = Wall::UpDown;
-        drawTriangle(screenCoords[0], screenCoords[1], screenCoords[2], image, zbuffer, wall);
-    }
-
     model = new Model("resources/african_head.obj");
     for (int i = 0; i < model->getNumFaces(); i++) {
         std::vector<int> face = model->getFaceByIndex(i);
@@ -205,7 +208,31 @@ int main(int argc, char** argv) {
             uvCoords[j] = model->getTextureVertexByIndex(textureIndices[j]);
             normalCoords[j] = model->getNormalVertexByIndex(normalIndices[j]);
         }
-        drawTriangle(screenCoords[0], screenCoords[1], screenCoords[2], uvCoords[0], uvCoords[1], uvCoords[2], normalCoords[0], normalCoords[1], normalCoords[2], image, texture, zbuffer);
+        drawTriangle(screenCoords[0], screenCoords[1], screenCoords[2],
+            uvCoords[0], uvCoords[1], uvCoords[2],
+            normalCoords[0], normalCoords[1], normalCoords[2],
+            image, texture, zbuffer);
+    }
+
+    model = new Model("resources/cube.obj");
+    float cubeAlpha = 0.1f; // Прозрачность
+
+    for (int i = 0; i < model->getNumFaces(); i++) {
+        std::vector<int> face = model->getFaceByIndex(i);
+        Vec3i screenCoords[3];
+        Vec3f worldCoords[3];
+        for (int j = 0; j < 3; j++) {
+            Vec3f vert = model->getVertexByIndex(face[j]);
+            screenCoords[j] = matrixToVector(cameraViewport * projectionMatrix * viewModel * vectorToMatrix(vert));
+            worldCoords[j] = vert;
+        }
+        Wall wall;
+        if (i < 4) wall = Wall::LeftRight;
+        else if (i > 7) wall = Wall::Back;
+        else wall = Wall::UpDown;
+
+        drawTriangle(screenCoords[0], screenCoords[1], screenCoords[2],
+            image, zbuffer, wall, cubeAlpha);
     }
 
     image.flip_vertically();
