@@ -6,13 +6,13 @@
 #include "Vertex.h"
 #include <string>
 
-class BoxApp : public D3DApp
+class Framework : public D3DApp
 {
 public:
-    BoxApp(HINSTANCE hInstance, const std::string& objFilePath = "");
-    BoxApp(const BoxApp& rhs) = delete;
-    BoxApp& operator=(const BoxApp& rhs) = delete;
-    ~BoxApp();
+    Framework(HINSTANCE hInstance, const std::string& objFilePath = "");
+    Framework(const Framework& rhs) = delete;
+    Framework& operator=(const Framework& rhs) = delete;
+    ~Framework();
 
     virtual bool Initialize() override;
 

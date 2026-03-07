@@ -23,7 +23,7 @@
     <ClCompile Include="Common\MathHelper.cpp">
       <Filter>Common\cpp</Filter>
     </ClCompile>
-    <ClCompile Include="BoxApp.cpp">
+    <ClCompile Include="Framework.cpp">
       <Filter>cpp</Filter>
     </ClCompile>
     <ClCompile Include="GameObject.cpp">
@@ -84,7 +84,7 @@
     <ClInclude Include="Vertex.h">
       <Filter>H</Filter>
     </ClInclude>
-    <ClInclude Include="BoxApp.h">
+    <ClInclude Include="Framework.h">
       <Filter>H</Filter>
     </ClInclude>
     <ClInclude Include="GameObject.h">

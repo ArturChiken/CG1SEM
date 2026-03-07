@@ -1,4 +1,4 @@
-#include "BoxApp.h"
+#include "Framework.h"
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance,
@@ -11,7 +11,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance,
     try
     {
 
-        BoxApp theApp(hInstance, "");
+        Framework theApp(hInstance, "");
         if (!theApp.Initialize())
             return 0;
 

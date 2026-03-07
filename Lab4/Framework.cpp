@@ -1,22 +1,22 @@
-#include "BoxApp.h"
+#include "Framework.h"
 
-BoxApp::BoxApp(HINSTANCE hInstance, const std::string& objFilePath)
+Framework::Framework(HINSTANCE hInstance, const std::string& objFilePath)
     : D3DApp(hInstance)
     , mObjFilePath(objFilePath)
     , mCurrentCbvIndex(0)
     , mTimeAccumulator(0.0f)
 {
-    mMainWndCaption = L"Box Application with GameObjects";
+    mMainWndCaption = L"Scene";
     mScene = std::make_unique<Scene>();
 }
 
-BoxApp::~BoxApp()
+Framework::~Framework()
 {
     if (md3dDevice != nullptr)
         FlushCommandQueue();
 }
 
-bool BoxApp::Initialize()
+bool Framework::Initialize()
 {
     if (!D3DApp::Initialize())
         return false;
@@ -45,7 +45,7 @@ bool BoxApp::Initialize()
     return true;
 }
 
-void BoxApp::CreateGameObjects()
+void Framework::CreateGameObjects()
 {
     // Создаем несколько кубов на сцене
     auto* cube1 = mScene->CreateObject<CubeObject>(1.0f);
@@ -75,7 +75,7 @@ void BoxApp::CreateGameObjects()
     }
 }
 
-void BoxApp::BuildRootSignature()
+void Framework::BuildRootSignature()
 {
     CD3DX12_DESCRIPTOR_RANGE cbvTable;
     cbvTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
@@ -104,7 +104,7 @@ void BoxApp::BuildRootSignature()
         IID_PPV_ARGS(mRootSignature.GetAddressOf())));
 }
 
-void BoxApp::BuildShadersAndInputLayout()
+void Framework::BuildShadersAndInputLayout()
 {
     HRESULT hr = S_OK;
 
@@ -118,7 +118,7 @@ void BoxApp::BuildShadersAndInputLayout()
     };
 }
 
-void BoxApp::BuildPSO()
+void Framework::BuildPSO()
 {
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
     ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
@@ -149,7 +149,7 @@ void BoxApp::BuildPSO()
     ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&mPSO)));
 }
 
-void BoxApp::BuildDescriptorHeaps()
+void Framework::BuildDescriptorHeaps()
 {
     UINT objectCount = max(1, static_cast<UINT>(mScene->GetObjectCount()));
 
@@ -161,7 +161,7 @@ void BoxApp::BuildDescriptorHeaps()
     ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&mCbvHeap)));
 }
 
-void BoxApp::BuildConstantBuffers()
+void Framework::BuildConstantBuffers()
 {
     UINT objectCount = max(1, static_cast<UINT>(mScene->GetObjectCount()));
     mObjectCB = std::make_unique<UploadBuffer<ObjectConstants>>(md3dDevice.Get(), objectCount, true);
@@ -182,7 +182,7 @@ void BoxApp::BuildConstantBuffers()
     }
 }
 
-void BoxApp::OnResize()
+void Framework::OnResize()
 {
     D3DApp::OnResize();
 
@@ -190,7 +190,7 @@ void BoxApp::OnResize()
     XMStoreFloat4x4(&mProj, P);
 }
 
-void BoxApp::Update(const GameTimer& gt)
+void Framework::Update(const GameTimer& gt)
 {
     // Обновляем сцену (все объекты)
     mScene->Update(gt);
@@ -216,7 +216,7 @@ void BoxApp::Update(const GameTimer& gt)
     XMStoreFloat4x4(&mView, view);
 }
 
-void BoxApp::Draw(const GameTimer& gt)
+void Framework::Draw(const GameTimer& gt)
 {
     // Переиспользуем память для команд
     ThrowIfFailed(mDirectCmdListAlloc->Reset());
@@ -305,7 +305,7 @@ void BoxApp::Draw(const GameTimer& gt)
     FlushCommandQueue();
 }
 
-void BoxApp::OnMouseDown(WPARAM btnState, int x, int y)
+void Framework::OnMouseDown(WPARAM btnState, int x, int y)
 {
     mLastMousePos.x = x;
     mLastMousePos.y = y;
@@ -313,12 +313,12 @@ void BoxApp::OnMouseDown(WPARAM btnState, int x, int y)
     SetCapture(mhMainWnd);
 }
 
-void BoxApp::OnMouseUp(WPARAM btnState, int x, int y)
+void Framework::OnMouseUp(WPARAM btnState, int x, int y)
 {
     ReleaseCapture();
 }
 
-void BoxApp::OnMouseMove(WPARAM btnState, int x, int y)
+void Framework::OnMouseMove(WPARAM btnState, int x, int y)
 {
     if ((btnState & MK_LBUTTON) != 0)
     {
