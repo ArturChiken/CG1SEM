@@ -1,7 +1,6 @@
 #include "GameObject.h"
 #include "Common/d3dUtil.h"
 
-// GameObject implementation
 GameObject::GameObject() :
     mPosition(0.0f, 0.0f, 0.0f),
     mRotation(0.0f, 0.0f, 0.0f),
@@ -15,7 +14,6 @@ GameObject::GameObject() :
 
 void GameObject::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
 {
-    // Базовый класс не создает геометрию
     mIsInitialized = true;
 }
 
@@ -27,9 +25,19 @@ void GameObject::Update(const GameTimer& gt)
 
 void GameObject::Draw(ID3D12GraphicsCommandList* cmdList, UINT cbvIndex)
 {
-    if (!mIsVisible || !mIsInitialized) return;
+    if (!mIsVisible || !mIsInitialized || !mMeshGeometry) return;
 
-    // Базовый класс не рисует, но наследники должны переопределить
+    if (!mMeshGeometry->DrawArgs.empty())
+    {
+        auto& drawArgs = mMeshGeometry->DrawArgs.begin()->second;
+
+        cmdList->IASetVertexBuffers(0, 1, &mMeshGeometry->VertexBufferView());
+        cmdList->IASetIndexBuffer(&mMeshGeometry->IndexBufferView());
+        cmdList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+        cmdList->DrawIndexedInstanced(drawArgs.IndexCount, 1,
+            drawArgs.StartIndexLocation, drawArgs.BaseVertexLocation, 0);
+    }
 }
 
 void GameObject::SetPosition(float x, float y, float z)
@@ -66,7 +74,6 @@ void GameObject::UpdateWorldMatrix()
     XMStoreFloat4x4(&mWorld, world);
 }
 
-// CubeObject implementation
 CubeObject::CubeObject(float size) :
     GameObject(),
     mSize(size)
@@ -82,35 +89,28 @@ void CubeObject::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* cmd
 
 void CubeObject::BuildGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
 {
-    // Создаем геометрию куба
     std::array<Vertex, 8> vertices = {
-        Vertex({ XMFLOAT3(-mSize, -mSize, -mSize), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }), // 0 - красный
-        Vertex({ XMFLOAT3(-mSize, +mSize, -mSize), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }), // 1 - зеленый
-        Vertex({ XMFLOAT3(+mSize, +mSize, -mSize), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }), // 2 - синий
-        Vertex({ XMFLOAT3(+mSize, -mSize, -mSize), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }), // 3 - желтый
-        Vertex({ XMFLOAT3(-mSize, -mSize, +mSize), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }), // 4 - пурпурный
-        Vertex({ XMFLOAT3(-mSize, +mSize, +mSize), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }), // 5 - голубой
-        Vertex({ XMFLOAT3(+mSize, +mSize, +mSize), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }), // 6 - белый
-        Vertex({ XMFLOAT3(+mSize, -mSize, +mSize), XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f) })  // 7 - серый
+        Vertex({ XMFLOAT3(-mSize, -mSize, -mSize), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }),
+        Vertex({ XMFLOAT3(-mSize, +mSize, -mSize), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }),
+        Vertex({ XMFLOAT3(+mSize, +mSize, -mSize), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }),
+        Vertex({ XMFLOAT3(+mSize, -mSize, -mSize), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }),
+        Vertex({ XMFLOAT3(-mSize, -mSize, +mSize), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }),
+        Vertex({ XMFLOAT3(-mSize, +mSize, +mSize), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }),
+        Vertex({ XMFLOAT3(+mSize, +mSize, +mSize), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }),
+        Vertex({ XMFLOAT3(+mSize, -mSize, +mSize), XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f) })
     };
 
     std::array<std::uint16_t, 36> indices = {
-        // Front face
         0, 1, 2,
         0, 2, 3,
-        // Back face
         4, 6, 5,
         4, 7, 6,
-        // Left face
         4, 5, 1,
         4, 1, 0,
-        // Right face
         3, 2, 6,
         3, 6, 7,
-        // Top face
         1, 5, 6,
         1, 6, 2,
-        // Bottom face
         4, 0, 3,
         4, 3, 7
     };
@@ -146,7 +146,6 @@ void CubeObject::BuildGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* 
     mMeshGeometry->DrawArgs["box"] = submesh;
 }
 
-// ObjModelObject implementation
 ObjModelObject::ObjModelObject(const std::string& objFilePath) :
     GameObject(),
     mObjFilePath(objFilePath)
@@ -162,8 +161,6 @@ void ObjModelObject::Initialize(ID3D12Device* device, ID3D12GraphicsCommandList*
 
 void ObjModelObject::LoadFromObj(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
 {
-    // Здесь будет загрузка из OBJ файла
-    // Пока создаем простой куб как заглушку
     CubeObject temp(1.0f);
     temp.Initialize(device, cmdList);
     mMeshGeometry = std::move(temp.mMeshGeometry);

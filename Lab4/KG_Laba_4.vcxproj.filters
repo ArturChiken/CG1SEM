@@ -32,6 +32,12 @@
     <ClCompile Include="Scene.cpp">
       <Filter>cpp</Filter>
     </ClCompile>
+    <ClCompile Include="Pyramid.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="Sphere.cpp">
+      <Filter>cpp</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -91,6 +97,12 @@
       <Filter>H</Filter>
     </ClInclude>
     <ClInclude Include="Scene.h">
+      <Filter>H</Filter>
+    </ClInclude>
+    <ClInclude Include="Pyramid.h">
+      <Filter>H</Filter>
+    </ClInclude>
+    <ClInclude Include="Sphere.h">
       <Filter>H</Filter>
     </ClInclude>
   </ItemGroup>

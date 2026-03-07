@@ -33,7 +33,6 @@ private:
     void BuildShadersAndInputLayout();
     void BuildPSO();
 
-    // Новый метод для создания объектов
     void CreateGameObjects();
 
 private:
@@ -58,10 +57,8 @@ private:
 
     POINT mLastMousePos;
 
-    // Новые поля для управления объектами
     std::unique_ptr<Scene> mScene;
     UINT mCurrentCbvIndex;
 
-    // Для анимации
     float mTimeAccumulator;
 };

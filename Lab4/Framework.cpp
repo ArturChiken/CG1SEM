@@ -1,4 +1,6 @@
 #include "Framework.h"
+#include "Sphere.h"
+#include "Pyramid.h"
 
 Framework::Framework(HINSTANCE hInstance, const std::string& objFilePath)
     : D3DApp(hInstance)
@@ -26,10 +28,8 @@ bool Framework::Initialize()
     BuildRootSignature();
     BuildShadersAndInputLayout();
 
-    // Создаем игровые объекты
     CreateGameObjects();
 
-    // Инициализируем сцену
     mScene->Initialize(md3dDevice.Get(), mCommandList.Get());
 
     BuildDescriptorHeaps();
@@ -47,26 +47,23 @@ bool Framework::Initialize()
 
 void Framework::CreateGameObjects()
 {
-    // Создаем несколько кубов на сцене
     auto* cube1 = mScene->CreateObject<CubeObject>(1.0f);
     cube1->SetName("MainCube");
     cube1->SetPosition(0.0f, 0.0f, 0.0f);
     cube1->SetRotation(0.0f, 0.0f, 0.0f);
     cube1->SetScale(1.0f, 1.0f, 1.0f);
 
-    auto* cube2 = mScene->CreateObject<CubeObject>(0.5f);
-    cube2->SetName("SmallCube");
-    cube2->SetPosition(2.0f, 1.0f, 0.0f);
-    cube2->SetRotation(0.0f, 0.0f, 0.0f);
-    cube2->SetScale(1.0f, 1.0f, 1.0f);
+    auto* sphere1 = mScene->CreateObject<Sphere>(0.8f, 30, 30);
+    sphere1->SetName("RedSphere");
+    sphere1->SetPosition(0.0f, 2.5f, 0.0f);
+    sphere1->SetColor(1.0f, 0.2f, 0.2f, 1.0f);
 
-    auto* cube3 = mScene->CreateObject<CubeObject>(0.75f);
-    cube3->SetName("RotatingCube");
-    cube3->SetPosition(-2.0f, 0.5f, 0.0f);
-    cube3->SetRotation(0.0f, 0.0f, 0.0f);
-    cube3->SetScale(1.0f, 1.0f, 1.0f);
+    auto* pyramid = mScene->CreateObject<Pyramid>(1.2f, 1.8f);
+    pyramid->SetName("YellowPyramid");
+    pyramid->SetPosition(-2.5f, 0.9f, -1.5f);
+    pyramid->SetColor(1.0f, 1.0f, 0.0f, 1.0f);
+    pyramid->SetRotation(0.0f, 0.3f, 0.0f);
 
-    // Если указан OBJ файл, загружаем модель
     if (!mObjFilePath.empty())
     {
         auto* objModel = mScene->CreateObject<ObjModelObject>(mObjFilePath);
@@ -192,10 +189,11 @@ void Framework::OnResize()
 
 void Framework::Update(const GameTimer& gt)
 {
-    // Обновляем сцену (все объекты)
     mScene->Update(gt);
 
-    // Анимируем вращающийся куб
+    static float time = 0;
+    time += gt.DeltaTime();
+
     GameObject* rotatingCube = mScene->FindObject("RotatingCube");
     if (rotatingCube)
     {
@@ -203,7 +201,25 @@ void Framework::Update(const GameTimer& gt)
         rotatingCube->SetRotation(0.0f, mTimeAccumulator * 2.0f, 0.0f);
     }
 
-    // Обновляем камеру
+    GameObject* bouncingSphere = mScene->FindObject("BouncingSphere");
+    if (bouncingSphere)
+    {
+        XMFLOAT3 pos = bouncingSphere->GetPosition();
+        pos.y = 0.5f + abs(sinf(time * 3.0f)) * 1.5f;
+        bouncingSphere->SetPosition(pos.x, pos.y, pos.z);
+
+        bouncingSphere->SetRotation(time * 2.0f, time, 0.0f);
+    }
+    GameObject* redSphere = mScene->FindObject("RedSphere");
+    if (redSphere)
+    {
+        XMFLOAT3 pos;
+        pos.x = cosf(time * 0.5f) * 2.0f;
+        pos.z = sinf(time * 0.5f) * 2.0f;
+        pos.y = 2.5f + sinf(time * 2.0f) * 0.5f;
+        redSphere->SetPosition(pos.x, pos.y, pos.z);
+    }
+
     float x = mRadius * sinf(mPhi) * cosf(mTheta);
     float z = mRadius * sinf(mPhi) * sinf(mTheta);
     float y = mRadius * cosf(mPhi);
@@ -218,39 +234,31 @@ void Framework::Update(const GameTimer& gt)
 
 void Framework::Draw(const GameTimer& gt)
 {
-    // Переиспользуем память для команд
     ThrowIfFailed(mDirectCmdListAlloc->Reset());
     ThrowIfFailed(mCommandList->Reset(mDirectCmdListAlloc.Get(), mPSO.Get()));
 
     mCommandList->RSSetViewports(1, &mScreenViewport);
     mCommandList->RSSetScissorRects(1, &mScissorRect);
 
-    // Переход ресурса в состояние render target
     mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
         D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
 
-    // Очистка
     mCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
     mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-    // Установка render targets
     mCommandList->OMSetRenderTargets(1, &CurrentBackBufferView(), true, &DepthStencilView());
 
-    // Установка дескрипторного хипа
     ID3D12DescriptorHeap* descriptorHeaps[] = { mCbvHeap.Get() };
     mCommandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
-    // Установка корневой сигнатуры
     mCommandList->SetGraphicsRootSignature(mRootSignature.Get());
 
-    // Установка вершинного и индексного буфера для каждого объекта
     XMMATRIX view = XMLoadFloat4x4(&mView);
     XMMATRIX proj = XMLoadFloat4x4(&mProj);
     XMMATRIX viewProj = view * proj;
 
     mCurrentCbvIndex = 0;
 
-    // Рисуем все объекты сцены
     UINT objectCount = static_cast<UINT>(mScene->GetObjectCount());
 
     for (UINT i = 0; i < objectCount; i++)
@@ -264,15 +272,12 @@ void Framework::Draw(const GameTimer& gt)
         ObjectConstants objConstants;
         XMStoreFloat4x4(&objConstants.WorldViewProj, XMMatrixTranspose(worldViewProj));
 
-        // Обновляем константный буфер для этого объекта
         mObjectCB->CopyData(mCurrentCbvIndex, objConstants);
 
-        // Устанавливаем дескриптор CBV для этого объекта
         auto cbvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(mCbvHeap->GetGPUDescriptorHandleForHeapStart());
         cbvHandle.Offset(mCurrentCbvIndex, mCbvSrvUavDescriptorSize);
         mCommandList->SetGraphicsRootDescriptorTable(0, cbvHandle);
 
-        // Рисуем объект
         MeshGeometry* meshGeo = obj->GetMeshGeometry();
         if (meshGeo && meshGeo->DrawArgs.find("box") != meshGeo->DrawArgs.end())
         {
@@ -285,11 +290,20 @@ void Framework::Draw(const GameTimer& gt)
             mCommandList->DrawIndexedInstanced(boxDrawArgs.IndexCount, 1,
                 boxDrawArgs.StartIndexLocation, boxDrawArgs.BaseVertexLocation, 0);
         }
+        else if (!meshGeo->DrawArgs.empty())
+        {
+            auto& drawArgs = meshGeo->DrawArgs.begin()->second;
+            mCommandList->IASetVertexBuffers(0, 1, &meshGeo->VertexBufferView());
+            mCommandList->IASetIndexBuffer(&meshGeo->IndexBufferView());
+            mCommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+            mCommandList->DrawIndexedInstanced(drawArgs.IndexCount, 1,
+                drawArgs.StartIndexLocation, drawArgs.BaseVertexLocation, 0);
+        }
 
         mCurrentCbvIndex++;
     }
 
-    // Переход ресурса в состояние present
     mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
         D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
 
@@ -298,7 +312,6 @@ void Framework::Draw(const GameTimer& gt)
     ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
     mCommandQueue->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 
-    // Смена буфера
     ThrowIfFailed(mSwapChain->Present(0, 0));
     mCurrBackBuffer = (mCurrBackBuffer + 1) % SwapChainBufferCount;
 

@@ -11,19 +11,16 @@
 
 using namespace DirectX;
 
-// Базовый класс для всех игровых объектов
 class GameObject
 {
 public:
     GameObject();
     virtual ~GameObject() = default;
 
-    // Виртуальные методы для переопределения
     virtual void Initialize(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
     virtual void Update(const GameTimer& gt);
     virtual void Draw(ID3D12GraphicsCommandList* cmdList, UINT cbvIndex);
 
-    // Геттеры и сеттеры
     void SetPosition(float x, float y, float z);
     void SetRotation(float pitch, float yaw, float roll);
     void SetScale(float x, float y, float z);
@@ -34,11 +31,9 @@ public:
 
     XMFLOAT4X4 GetWorldMatrix() const { return mWorld; }
 
-    // Идентификация
     void SetName(const std::string& name) { mName = name; }
     std::string GetName() const { return mName; }
 
-    // Доступ к геометрии
     MeshGeometry* GetMeshGeometry() { return mMeshGeometry.get(); }
     const MeshGeometry* GetMeshGeometry() const { return mMeshGeometry.get(); }
 
@@ -46,24 +41,19 @@ protected:
     virtual void UpdateWorldMatrix();
 
 public:
-    // Трансформации
     XMFLOAT3 mPosition;
     XMFLOAT3 mRotation;
     XMFLOAT3 mScale;
     XMFLOAT4X4 mWorld;
 
-    // Геометрия
     std::unique_ptr<MeshGeometry> mMeshGeometry;
 
-    // Идентификация
     std::string mName;
 
-    // Флаги
     bool mIsVisible;
     bool mIsInitialized;
 };
 
-// Простой куб (наследуется от GameObject)
 class CubeObject : public GameObject
 {
 public:
@@ -77,7 +67,6 @@ private:
     void BuildGeometry(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 };
 
-// Класс для загрузки из OBJ файла
 class ObjModelObject : public GameObject
 {
 public:

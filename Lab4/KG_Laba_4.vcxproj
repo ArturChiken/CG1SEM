@@ -151,7 +151,9 @@
     <ClCompile Include="Common\MathHelper.cpp" />
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Pyramid.cpp" />
     <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="Sphere.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Framework.h" />
@@ -166,7 +168,9 @@
     <ClInclude Include="Common\UploadBuffer.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="ObjLoader.h" />
+    <ClInclude Include="Pyramid.h" />
     <ClInclude Include="Scene.h" />
+    <ClInclude Include="Sphere.h" />
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
