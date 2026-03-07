@@ -2,6 +2,7 @@
 #include "Common/d3dApp.h"
 #include "Common/MathHelper.h"
 #include "Common/UploadBuffer.h"
+#include "Scene.h"
 #include "Vertex.h"
 #include <string>
 
@@ -30,16 +31,16 @@ private:
     void BuildConstantBuffers();
     void BuildRootSignature();
     void BuildShadersAndInputLayout();
-    void BuildBoxGeometry();
-    void BuildGeometryFromObj(const std::string& filename);
     void BuildPSO();
+
+    // Новый метод для создания объектов
+    void CreateGameObjects();
 
 private:
     Microsoft::WRL::ComPtr<ID3D12RootSignature> mRootSignature = nullptr;
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mCbvHeap = nullptr;
 
     std::unique_ptr<UploadBuffer<ObjectConstants>> mObjectCB = nullptr;
-    std::unique_ptr<MeshGeometry> mBoxGeo = nullptr;
 
     Microsoft::WRL::ComPtr<ID3DBlob> mvsByteCode = nullptr;
     Microsoft::WRL::ComPtr<ID3DBlob> mpsByteCode = nullptr;
@@ -48,7 +49,6 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D12PipelineState> mPSO = nullptr;
 
-    XMFLOAT4X4 mWorld = MathHelper::Identity4x4();
     XMFLOAT4X4 mView = MathHelper::Identity4x4();
     XMFLOAT4X4 mProj = MathHelper::Identity4x4();
 
@@ -57,5 +57,11 @@ private:
     float mRadius = 5.0f;
 
     POINT mLastMousePos;
-};
 
+    // Новые поля для управления объектами
+    std::unique_ptr<Scene> mScene;
+    UINT mCurrentCbvIndex;
+
+    // Для анимации
+    float mTimeAccumulator;
+};
