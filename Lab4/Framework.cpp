@@ -7,8 +7,17 @@ Framework::Framework(HINSTANCE hInstance, const std::string& objFilePath)
     , mObjFilePath(objFilePath)
     , mCurrentCbvIndex(0)
     , mTimeAccumulator(0.0f)
+    , mCameraPosition(0.0f, 2.0f, -5.0f)
+    , mCameraTarget(0.0f, 0.0f, 0.0f)
+    , mCameraUp(0.0f, 1.0f, 0.0f)
+    , mCameraYaw(0.0f)
+    , mCameraPitch(0.3f)
+    , mMoveSpeed(5.0f)
+    , mRotateSpeed(2.0f)
+    , mKeyW(false), mKeyA(false), mKeyS(false), mKeyD(false)
+    , mKeyUp(false), mKeyDown(false), mKeyLeft(false), mKeyRight(false)
 {
-    mMainWndCaption = L"Scene";
+    mMainWndCaption = L"Sponza";
     mScene = std::make_unique<Scene>();
 }
 
@@ -16,6 +25,144 @@ Framework::~Framework()
 {
     if (md3dDevice != nullptr)
         FlushCommandQueue();
+}
+
+LRESULT Framework::MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_KEYDOWN:
+        if (lParam & 0x40000000)
+            break;
+
+        switch (wParam)
+        {
+        case 'W': mKeyW = true; break;
+        case 'A': mKeyA = true; break;
+        case 'S': mKeyS = true; break;
+        case 'D': mKeyD = true; break;
+        case VK_UP: mKeyUp = true; break;
+        case VK_DOWN: mKeyDown = true; break;
+        case VK_LEFT: mKeyLeft = true; break;
+        case VK_RIGHT: mKeyRight = true; break;
+        case VK_ESCAPE: PostQuitMessage(0); break;
+        }
+        return 0;
+
+    case WM_KEYUP:
+        switch (wParam)
+        {
+        case 'W': mKeyW = false; break;
+        case 'A': mKeyA = false; break;
+        case 'S': mKeyS = false; break;
+        case 'D': mKeyD = false; break;
+        case VK_UP: mKeyUp = false; break;
+        case VK_DOWN: mKeyDown = false; break;
+        case VK_LEFT: mKeyLeft = false; break;
+        case VK_RIGHT: mKeyRight = false; break;
+        }
+        return 0;
+
+    case WM_KILLFOCUS:
+        mKeyW = mKeyA = mKeyS = mKeyD = false;
+        mKeyUp = mKeyDown = mKeyLeft = mKeyRight = false;
+        return 0;
+    }
+
+    return D3DApp::MsgProc(hwnd, msg, wParam, lParam);
+}
+
+void Framework::ProcessKeyboardInput(const GameTimer& gt)
+{
+    float dt = gt.DeltaTime();
+
+    XMVECTOR forward = XMVectorSet(
+        sinf(mCameraYaw) * cosf(mCameraPitch),
+        -sinf(mCameraPitch),
+        cosf(mCameraYaw) * cosf(mCameraPitch),
+        0.0f
+    );
+
+    XMVECTOR right = XMVectorSet(
+        cosf(mCameraYaw),
+        0.0f,
+        -sinf(mCameraYaw),
+        0.0f
+    );
+
+    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+    if (mKeyW) {
+        XMVECTOR move = forward * mMoveSpeed * dt;
+        mCameraPosition.x += XMVectorGetX(move);
+        mCameraPosition.y += XMVectorGetY(move);
+        mCameraPosition.z += XMVectorGetZ(move);
+        mCameraTarget.x += XMVectorGetX(move);
+        mCameraTarget.y += XMVectorGetY(move);
+        mCameraTarget.z += XMVectorGetZ(move);
+    }
+    if (mKeyS) {
+        XMVECTOR move = forward * mMoveSpeed * dt;
+        mCameraPosition.x -= XMVectorGetX(move);
+        mCameraPosition.y -= XMVectorGetY(move);
+        mCameraPosition.z -= XMVectorGetZ(move);
+        mCameraTarget.x -= XMVectorGetX(move);
+        mCameraTarget.y -= XMVectorGetY(move);
+        mCameraTarget.z -= XMVectorGetZ(move);
+    }
+
+    if (mKeyA) {
+        XMVECTOR move = right * mMoveSpeed * dt;
+        mCameraPosition.x -= XMVectorGetX(move);
+        mCameraPosition.z -= XMVectorGetZ(move);
+        mCameraTarget.x -= XMVectorGetX(move);
+        mCameraTarget.z -= XMVectorGetZ(move);
+    }
+    if (mKeyD) {
+        XMVECTOR move = right * mMoveSpeed * dt;
+        mCameraPosition.x += XMVectorGetX(move);
+        mCameraPosition.z += XMVectorGetZ(move);
+        mCameraTarget.x += XMVectorGetX(move);
+        mCameraTarget.z += XMVectorGetZ(move);
+    }
+
+    if (mKeyLeft) {
+        mCameraYaw -= mRotateSpeed * dt;
+    }
+    if (mKeyRight) {
+        mCameraYaw += mRotateSpeed * dt;
+    }
+    if (mKeyUp) {
+        mCameraPitch -= mRotateSpeed * dt;
+        mCameraPitch = MathHelper::Clamp(mCameraPitch, -XM_PIDIV2 + 0.01f, XM_PIDIV2 - 0.01f);
+    }
+    if (mKeyDown) {
+        mCameraPitch += mRotateSpeed * dt;
+        mCameraPitch = MathHelper::Clamp(mCameraPitch, -XM_PIDIV2 + 0.01f, XM_PIDIV2 - 0.01f);
+    }
+
+    XMVECTOR lookDir = XMVectorSet(
+        sinf(mCameraYaw) * cosf(mCameraPitch),
+        -sinf(mCameraPitch),
+        cosf(mCameraYaw) * cosf(mCameraPitch),
+        0.0f
+    );
+
+    XMVECTOR posVec = XMLoadFloat3(&mCameraPosition);
+    XMVECTOR targetVec = posVec + lookDir;
+    XMStoreFloat3(&mCameraTarget, targetVec);
+}
+
+void Framework::UpdateCamera(const GameTimer& gt)
+{
+    ProcessKeyboardInput(gt);
+
+    XMVECTOR pos = XMLoadFloat3(&mCameraPosition);
+    XMVECTOR target = XMLoadFloat3(&mCameraTarget);
+    XMVECTOR up = XMLoadFloat3(&mCameraUp);
+
+    XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
+    XMStoreFloat4x4(&mView, view);
 }
 
 bool Framework::Initialize()
@@ -197,8 +344,13 @@ void Framework::Update(const GameTimer& gt)
     GameObject* rotatingCube = mScene->FindObject("RotatingCube");
     if (rotatingCube)
     {
-        mTimeAccumulator += gt.DeltaTime();
-        rotatingCube->SetRotation(0.0f, mTimeAccumulator * 2.0f, 0.0f);
+        rotatingCube->SetRotation(0.0f, time * 2.0f, 0.0f);
+    }
+
+    GameObject* pyramid = mScene->FindObject("YellowPyramid");
+    if (pyramid)
+    {
+        pyramid->SetRotation(0.0f, time * 0.5f, 0.0f);
     }
 
     GameObject* bouncingSphere = mScene->FindObject("BouncingSphere");
@@ -207,29 +359,10 @@ void Framework::Update(const GameTimer& gt)
         XMFLOAT3 pos = bouncingSphere->GetPosition();
         pos.y = 0.5f + abs(sinf(time * 3.0f)) * 1.5f;
         bouncingSphere->SetPosition(pos.x, pos.y, pos.z);
-
         bouncingSphere->SetRotation(time * 2.0f, time, 0.0f);
     }
-    GameObject* redSphere = mScene->FindObject("RedSphere");
-    if (redSphere)
-    {
-        XMFLOAT3 pos;
-        pos.x = cosf(time * 0.5f) * 2.0f;
-        pos.z = sinf(time * 0.5f) * 2.0f;
-        pos.y = 2.5f + sinf(time * 2.0f) * 0.5f;
-        redSphere->SetPosition(pos.x, pos.y, pos.z);
-    }
 
-    float x = mRadius * sinf(mPhi) * cosf(mTheta);
-    float z = mRadius * sinf(mPhi) * sinf(mTheta);
-    float y = mRadius * cosf(mPhi);
-
-    XMVECTOR pos = XMVectorSet(x, y, z, 1.0f);
-    XMVECTOR target = XMVectorZero();
-    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-
-    XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
-    XMStoreFloat4x4(&mView, view);
+    UpdateCamera(gt);
 }
 
 void Framework::Draw(const GameTimer& gt)

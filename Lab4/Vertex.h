@@ -8,6 +8,8 @@ struct Vertex
 {
     XMFLOAT3 Pos;
     XMFLOAT4 Color;
+    XMFLOAT3 Normal;     // ƒќЅј¬Ћя≈ћ нормаль
+    XMFLOAT2 TexC;       // ƒќЅј¬Ћя≈ћ текстурные координаты
 };
 
 struct ObjectConstants
