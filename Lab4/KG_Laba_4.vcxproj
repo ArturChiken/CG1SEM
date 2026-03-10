@@ -169,6 +169,7 @@
     <ClInclude Include="Common\UploadBuffer.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="ObjLoader.h" />
+    <ClInclude Include="ObjModelObject.h" />
     <ClInclude Include="Pyramid.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Sphere.h" />

@@ -18,9 +18,28 @@ public:
         XMFLOAT2 texCoord;
     };
 
+    struct ObjData
+    {
+        std::vector<XMFLOAT3> positions;
+        std::vector<XMFLOAT3> normals;
+        std::vector<XMFLOAT2> texCoords;
+        std::vector<uint32_t> indices;
+    };
+
     static bool LoadObjFile(const std::string& filename,
         std::vector<XMFLOAT3>& positions,
-        std::vector<uint32_t>& indices)  // uint32_t вместо uint16_t
+        std::vector<uint32_t>& indices)
+    {
+        ObjData data;
+        if (!LoadObjFile(filename, data))
+            return false;
+
+        positions = data.positions;
+        indices = data.indices;
+        return true;
+    }
+
+    static bool LoadObjFile(const std::string& filename, ObjData& outData)
     {
         std::ifstream file(filename);
         if (!file.is_open())
@@ -46,7 +65,6 @@ public:
             }
         };
 
-        // Хеш-функция для дедупликации вершин
         struct FaceVertexHash
         {
             size_t operator()(const FaceVertex& fv) const
@@ -69,25 +87,25 @@ public:
             std::string prefix;
             iss >> prefix;
 
-            if (prefix == "v") // Vertex position
+            if (prefix == "v")
             {
                 XMFLOAT3 pos;
                 iss >> pos.x >> pos.y >> pos.z;
                 tempPositions.push_back(pos);
             }
-            else if (prefix == "vn") // Vertex normal
+            else if (prefix == "vn")
             {
                 XMFLOAT3 norm;
                 iss >> norm.x >> norm.y >> norm.z;
                 tempNormals.push_back(norm);
             }
-            else if (prefix == "vt") // Texture coordinate
+            else if (prefix == "vt")
             {
                 XMFLOAT2 tex;
                 iss >> tex.x >> tex.y;
                 tempTexCoords.push_back(tex);
             }
-            else if (prefix == "f") // Face
+            else if (prefix == "f")
             {
                 std::string vertex1, vertex2, vertex3;
                 iss >> vertex1 >> vertex2 >> vertex3;
@@ -99,23 +117,23 @@ public:
 
                         if (pos1 == std::string::npos)
                         {
-                            fv.posIndex = std::stoi(str);
+                            fv.posIndex = std::stoi(str) - 1;
                         }
                         else
                         {
-                            fv.posIndex = std::stoi(str.substr(0, pos1));
+                            fv.posIndex = std::stoi(str.substr(0, pos1)) - 1;
                             size_t pos2 = str.find('/', pos1 + 1);
 
                             if (pos2 != std::string::npos)
                             {
                                 if (pos2 > pos1 + 1)
-                                    fv.texIndex = std::stoi(str.substr(pos1 + 1, pos2 - pos1 - 1));
+                                    fv.texIndex = std::stoi(str.substr(pos1 + 1, pos2 - pos1 - 1)) - 1;
                                 if (pos2 + 1 < str.length())
-                                    fv.normIndex = std::stoi(str.substr(pos2 + 1));
+                                    fv.normIndex = std::stoi(str.substr(pos2 + 1)) - 1;
                             }
                             else if (pos1 + 1 < str.length())
                             {
-                                fv.texIndex = std::stoi(str.substr(pos1 + 1));
+                                fv.texIndex = std::stoi(str.substr(pos1 + 1)) - 1;
                             }
                         }
                         return fv;
@@ -125,26 +143,38 @@ public:
                 FaceVertex fv2 = parseFaceVertex(vertex2);
                 FaceVertex fv3 = parseFaceVertex(vertex3);
 
-                // Обработка каждой вершины треугольника с дедупликацией
                 auto processVertex = [&](const FaceVertex& fv)
                     {
                         auto it = vertexMap.find(fv);
                         if (it != vertexMap.end())
                         {
-                            // Вершина уже существует - используем её индекс
-                            indices.push_back(it->second);
+                            outData.indices.push_back(it->second);
                         }
                         else
                         {
-                            // Новая вершина
-                            int posIdx = fv.posIndex - 1;  // OBJ индексы с 1
-                            if (posIdx >= 0 && posIdx < tempPositions.size())
+                            uint32_t newIndex = static_cast<uint32_t>(outData.positions.size());
+
+                            if (fv.posIndex >= 0 && fv.posIndex < tempPositions.size())
                             {
-                                uint32_t newIndex = static_cast<uint32_t>(positions.size());
-                                positions.push_back(tempPositions[posIdx]);
-                                vertexMap[fv] = newIndex;
-                                indices.push_back(newIndex);
+                                outData.positions.push_back(tempPositions[fv.posIndex]);
                             }
+
+                            if (fv.normIndex >= 0 && fv.normIndex < tempNormals.size())
+                            {
+                                outData.normals.push_back(tempNormals[fv.normIndex]);
+                            }
+                            else
+                            {
+                                outData.normals.push_back(XMFLOAT3(0, 1, 0));
+                            }
+
+                            if (fv.texIndex >= 0 && fv.texIndex < tempTexCoords.size())
+                            {
+                                outData.texCoords.push_back(tempTexCoords[fv.texIndex]);
+                            }
+
+                            vertexMap[fv] = newIndex;
+                            outData.indices.push_back(newIndex);
                         }
                     };
 
@@ -155,6 +185,6 @@ public:
         }
 
         file.close();
-        return !positions.empty();
+        return !outData.positions.empty();
     }
 };

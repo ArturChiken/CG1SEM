@@ -1,13 +1,16 @@
 #include "Framework.h"
 #include "Sphere.h"
 #include "Pyramid.h"
+#include "ObjLoader.h"
+#include "Vertex.h"
+#include <vector> 
 
 Framework::Framework(HINSTANCE hInstance, const std::string& objFilePath)
     : D3DApp(hInstance)
     , mObjFilePath(objFilePath)
     , mCurrentCbvIndex(0)
     , mTimeAccumulator(0.0f)
-    , mCameraPosition(0.0f, 2.0f, -5.0f)
+    , mCameraPosition(5.0f, 5.0f, -10.0f)
     , mCameraTarget(0.0f, 0.0f, 0.0f)
     , mCameraUp(0.0f, 1.0f, 0.0f)
     , mCameraYaw(0.0f)
@@ -194,28 +197,18 @@ bool Framework::Initialize()
 
 void Framework::CreateGameObjects()
 {
-    auto* cube1 = mScene->CreateObject<CubeObject>(1.0f);
-    cube1->SetName("MainCube");
-    cube1->SetPosition(0.0f, 0.0f, 0.0f);
-    cube1->SetRotation(0.0f, 0.0f, 0.0f);
-    cube1->SetScale(1.0f, 1.0f, 1.0f);
-
-    auto* sphere1 = mScene->CreateObject<Sphere>(0.8f, 30, 30);
-    sphere1->SetName("RedSphere");
-    sphere1->SetPosition(0.0f, 2.5f, 0.0f);
-    sphere1->SetColor(1.0f, 0.2f, 0.2f, 1.0f);
-
-    auto* pyramid = mScene->CreateObject<Pyramid>(1.2f, 1.8f);
-    pyramid->SetName("YellowPyramid");
-    pyramid->SetPosition(-2.5f, 0.9f, -1.5f);
-    pyramid->SetColor(1.0f, 1.0f, 0.0f, 1.0f);
-    pyramid->SetRotation(0.0f, 0.3f, 0.0f);
-
     if (!mObjFilePath.empty())
     {
         auto* objModel = mScene->CreateObject<ObjModelObject>(mObjFilePath);
-        objModel->SetName("ImportedModel");
-        objModel->SetPosition(0.0f, 2.0f, 0.0f);
+        if (objModel)
+        {
+            objModel->SetName("SponzaModel");
+            objModel->SetPosition(0.0f, 0.0f, 0.0f);
+            objModel->SetScale(0.005f, 0.005f, 0.005f);
+        }
+    }
+    else
+    {
     }
 }
 
@@ -325,6 +318,7 @@ void Framework::BuildConstantBuffers()
         md3dDevice->CreateConstantBufferView(&cbvDesc, handle);
     }
 }
+
 
 void Framework::OnResize()
 {

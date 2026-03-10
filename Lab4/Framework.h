@@ -1,6 +1,7 @@
 #pragma once
 #include "Common/d3dApp.h"
 #include "Common/MathHelper.h"
+#include "GameObject.h"
 #include "Common/UploadBuffer.h"
 #include "Scene.h"
 #include "Vertex.h"
@@ -35,6 +36,7 @@ private:
     void BuildShadersAndInputLayout();
     void BuildPSO();
     void CreateGameObjects();
+    void Framework::LoadObjModel();
 
     void UpdateCamera(const GameTimer& gt);
     void ProcessKeyboardInput(const GameTimer& gt);

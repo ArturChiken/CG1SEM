@@ -14,7 +14,6 @@ public:
     void Update(const GameTimer& gt);
     void Draw(ID3D12GraphicsCommandList* cmdList, ID3D12DescriptorHeap* cbvHeap, UINT& cbvIndex);
 
-    // Управление объектами
     template<typename T, typename... Args>
     T* CreateObject(Args&&... args)
     {

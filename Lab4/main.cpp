@@ -11,7 +11,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance,
     try
     {
 
-        Framework theApp(hInstance, "");
+        Framework theApp(hInstance, "Models/sponza.obj");
         if (!theApp.Initialize())
             return 0;
 

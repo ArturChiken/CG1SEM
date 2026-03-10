@@ -105,5 +105,8 @@
     <ClInclude Include="Sphere.h">
       <Filter>H</Filter>
     </ClInclude>
+    <ClInclude Include="ObjModelObject.h">
+      <Filter>H</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
